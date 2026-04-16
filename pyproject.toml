@@ -15,6 +15,9 @@ dependencies = [
     "streamlit>=1.44.0",
 ]
 
+[project.scripts]
+cuga-arc3 = "cuga_arc3.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",

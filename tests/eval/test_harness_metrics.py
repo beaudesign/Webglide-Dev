@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from cuga_arc3.eval.harness import compute_stage_metrics
 from cuga_arc3.eval.manifest import BenchmarkManifest
+from cuga_arc3.reporting import stage_lift
 
 
 def test_compute_stage_metrics_win_rate_for_25_of_50() -> None:
@@ -25,3 +26,13 @@ def test_compute_stage_metrics_win_rate_for_25_of_50() -> None:
     assert metrics.solved_count == 25
     assert metrics.total_games == 50
     assert metrics.win_rate == 0.5
+
+
+def test_stage_lift_from_baseline() -> None:
+    baseline = {"stage": "S0", "win_rate": 0.22}
+    candidate = {"stage": "S2", "win_rate": 0.36}
+
+    report = stage_lift(baseline, candidate)
+
+    assert report["absolute_lift"] == 0.14
+    assert report["relative_lift_pct"] == 63.64
