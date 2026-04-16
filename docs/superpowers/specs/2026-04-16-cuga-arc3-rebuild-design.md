@@ -52,29 +52,26 @@ Secondary objective:
 
 MVP-1 uses four modules with stable interfaces to prevent evaluation drift:
 
-1. **`arc-adapter`**
-   - ARC-3 API client and session primitives.
-   - Handles game discovery, start/reset, action submission, and scorecard lifecycle.
-   - Normalizes API responses into internal events and typed run state.
-
-2. **`cuga-runner`**
-   - Executes game loops with pluggable scaffold profiles (`S0..S3`).
-   - Exposes deterministic run configuration and control flags.
-   - Emits structured execution events for both evaluation and UI.
-
-3. **`eval-harness`**
-   - Runs the fixed benchmark manifest (30 core + 20 stress).
-   - Aggregates win rate and per-game metrics by scaffold stage.
-   - Produces stage delta reports and baseline-lift summaries.
-
-4. **`operator-ui`**
-   - Main run control/results surface.
-   - Right panel streams execution trace with explicit sections:
-     - Current plan.
-     - Reasoning steps.
-     - Action proposal and rationale.
-     - Reflection/retry notes.
-   - Supports run replay from stored trajectory events.
+1. `**arc-adapter`**
+  - ARC-3 API client and session primitives.
+  - Handles game discovery, start/reset, action submission, and scorecard lifecycle.
+  - Normalizes API responses into internal events and typed run state.
+2. `**cuga-runner**`
+  - Executes game loops with pluggable scaffold profiles (`S0..S3`).
+  - Exposes deterministic run configuration and control flags.
+  - Emits structured execution events for both evaluation and UI.
+3. `**eval-harness**`
+  - Runs the fixed benchmark manifest (30 core + 20 stress).
+  - Aggregates win rate and per-game metrics by scaffold stage.
+  - Produces stage delta reports and baseline-lift summaries.
+4. `**operator-ui**`
+  - Main run control/results surface.
+  - Right panel streams execution trace with explicit sections:
+    - Current plan.
+    - Reasoning steps.
+    - Action proposal and rationale.
+    - Reflection/retry notes.
+  - Supports run replay from stored trajectory events.
 
 ## 4) MVP Ladder
 
@@ -116,11 +113,11 @@ Use a deterministic loop to keep results comparable:
 2. Select scaffold stage (`S0`, `S1`, `S2`, `S3`).
 3. Open scorecard and attach run metadata.
 4. For each game:
-   - Start/reset session.
-   - Generate plan and candidate action.
-   - Execute ARC action.
-   - Consume observation and update internal state.
-   - Continue until solved, terminated, or step budget exhausted.
+  - Start/reset session.
+  - Generate plan and candidate action.
+  - Execute ARC action.
+  - Consume observation and update internal state.
+  - Continue until solved, terminated, or step budget exhausted.
 5. Close scorecard and aggregate metrics.
 6. Generate stage report and stage-to-stage deltas.
 
