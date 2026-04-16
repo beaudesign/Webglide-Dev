@@ -8,16 +8,16 @@ version = "0.1.0"
 description = "CUGA ARC3 rebuild MVP"
 requires-python = ">=3.12"
 dependencies = [
-    "httpx",
-    "pydantic",
-    "python-dotenv",
-    "pyyaml",
-    "streamlit",
+    "httpx>=0.28.0",
+    "pydantic>=2.8.0",
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+    "streamlit>=1.44.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest",
+    "pytest>=8.3.0",
 ]
 
 [tool.pytest.ini_options]

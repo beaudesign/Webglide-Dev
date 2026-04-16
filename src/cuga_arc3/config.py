@@ -13,7 +13,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        arc_api_key = os.getenv("ARC_API_KEY")
+        arc_api_key = os.getenv("ARC_API_KEY", "").strip()
         if not arc_api_key:
             raise ValueError("ARC_API_KEY is required")
 
