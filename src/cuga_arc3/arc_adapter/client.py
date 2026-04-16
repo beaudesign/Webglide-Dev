@@ -24,6 +24,7 @@ class ArcClient:
         async with httpx.AsyncClient(
             base_url=self.base_url,
             transport=self.transport,
+            timeout=30.0,
         ) as client:
             response = await client.request(
                 method=method,
@@ -35,7 +36,7 @@ class ArcClient:
         response.raise_for_status()
         return response.json()
 
-    async def list_games(self) -> list[Any]:
+    async def list_games(self) -> list[dict[str, Any]]:
         return await self._request("GET", "/games")
 
     async def open_scorecard(self, metadata: dict[str, Any]) -> Any:
