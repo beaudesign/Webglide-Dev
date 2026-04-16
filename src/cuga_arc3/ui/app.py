@@ -39,3 +39,25 @@ def render(events: list[TraceEvent]) -> None:
         st.json(panel["action"])
         st.markdown("**Reflection**")
         st.write(panel["reflection"])
+
+
+def _default_events() -> list[TraceEvent]:
+    return [
+        TraceEvent("plan_updated", "S1", "demo-game", 0, {"plan": "scan board for anchor cells"}),
+        TraceEvent(
+            "action_proposed",
+            "S1",
+            "demo-game",
+            1,
+            {"action": 4, "rationale": "apply candidate transform"},
+        ),
+        TraceEvent("reflection", "S1", "demo-game", 1, {"note": "keep anchor fixed, expand pattern"}),
+    ]
+
+
+def main() -> None:
+    render(_default_events())
+
+
+if __name__ == "__main__":
+    main()
