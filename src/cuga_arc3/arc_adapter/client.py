@@ -10,19 +10,22 @@ import httpx
 class ArcClient:
     base_url: str
     api_key: str
-    transport: httpx.BaseTransport | None = None
+    transport: httpx.AsyncBaseTransport | None = None
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}
 
-    def _request(
+    async def _request(
         self,
         method: str,
         path: str,
         json_body: dict[str, Any] | None = None,
     ) -> Any:
-        with httpx.Client(base_url=self.base_url, transport=self.transport) as client:
-            response = client.request(
+        async with httpx.AsyncClient(
+            base_url=self.base_url,
+            transport=self.transport,
+        ) as client:
+            response = await client.request(
                 method=method,
                 url=path,
                 headers=self._headers(),
@@ -32,13 +35,13 @@ class ArcClient:
         response.raise_for_status()
         return response.json()
 
-    def list_games(self) -> list[Any]:
-        return self._request("GET", "/games")
+    async def list_games(self) -> list[Any]:
+        return await self._request("GET", "/games")
 
-    def open_scorecard(self, metadata: dict[str, Any]) -> Any:
-        return self._request("POST", "/scorecards/open", json_body=metadata)
+    async def open_scorecard(self, metadata: dict[str, Any]) -> Any:
+        return await self._request("POST", "/scorecards/open", json_body=metadata)
 
-    def reset_or_start(
+    async def reset_or_start(
         self,
         game_id: str,
         card_id: str,
@@ -48,9 +51,9 @@ class ArcClient:
         if guid is not None:
             payload["guid"] = guid
 
-        return self._request("POST", "/commands/reset", json_body=payload)
+        return await self._request("POST", "/commands/reset", json_body=payload)
 
-    def execute_action(
+    async def execute_action(
         self,
         guid: str,
         action: int,
@@ -60,7 +63,9 @@ class ArcClient:
         endpoint = "/commands/action6" if action == 6 else f"/commands/action{action}"
         payload: dict[str, Any] = {"guid": guid}
         if action == 6:
+            if x is None or y is None:
+                raise ValueError("x and y are required for action 6")
             payload["x"] = x
             payload["y"] = y
 
-        return self._request("POST", endpoint, json_body=payload)
+        return await self._request("POST", endpoint, json_body=payload)

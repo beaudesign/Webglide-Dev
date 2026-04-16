@@ -1,9 +1,13 @@
+import json
+
 import httpx
+import pytest
 
 from cuga_arc3.arc_adapter.client import ArcClient
 
 
-def test_list_games_sends_bearer_token_and_returns_json_list() -> None:
+@pytest.mark.anyio
+async def test_list_games_sends_bearer_token_and_returns_json_list() -> None:
     expected_games = [{"id": "game-1"}, {"id": "game-2"}]
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -18,6 +22,123 @@ def test_list_games_sends_bearer_token_and_returns_json_list() -> None:
         transport=httpx.MockTransport(handler),
     )
 
-    games = client.list_games()
+    games = await client.list_games()
 
     assert games == expected_games
+
+
+@pytest.mark.anyio
+async def test_open_scorecard_posts_metadata_payload() -> None:
+    metadata = {"game_id": "game-1", "stage": "S0"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/scorecards/open"
+        assert json.loads(request.content.decode()) == metadata
+        return httpx.Response(status_code=200, json={"guid": "g-1"})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.open_scorecard(metadata)
+
+    assert response == {"guid": "g-1"}
+
+
+@pytest.mark.anyio
+async def test_reset_or_start_posts_required_fields_without_guid() -> None:
+    expected_payload = {"game_id": "game-1", "card_id": "card-1"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/commands/reset"
+        assert json.loads(request.content.decode()) == expected_payload
+        return httpx.Response(status_code=200, json={"ok": True})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.reset_or_start(game_id="game-1", card_id="card-1")
+
+    assert response == {"ok": True}
+
+
+@pytest.mark.anyio
+async def test_reset_or_start_posts_guid_when_provided() -> None:
+    expected_payload = {"game_id": "game-1", "card_id": "card-1", "guid": "guid-1"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/commands/reset"
+        assert json.loads(request.content.decode()) == expected_payload
+        return httpx.Response(status_code=200, json={"ok": True})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.reset_or_start(
+        game_id="game-1",
+        card_id="card-1",
+        guid="guid-1",
+    )
+
+    assert response == {"ok": True}
+
+
+@pytest.mark.anyio
+async def test_execute_action_uses_action6_endpoint_with_coordinates_payload() -> None:
+    expected_payload = {"guid": "guid-1", "x": 3, "y": 4}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/commands/action6"
+        assert json.loads(request.content.decode()) == expected_payload
+        return httpx.Response(status_code=200, json={"ok": True})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.execute_action(guid="guid-1", action=6, x=3, y=4)
+
+    assert response == {"ok": True}
+
+
+@pytest.mark.anyio
+async def test_execute_action_uses_action_number_endpoint_for_non_6() -> None:
+    expected_payload = {"guid": "guid-1"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/commands/action4"
+        assert json.loads(request.content.decode()) == expected_payload
+        return httpx.Response(status_code=200, json={"ok": True})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.execute_action(guid="guid-1", action=4)
+
+    assert response == {"ok": True}
+
+
+@pytest.mark.anyio
+async def test_execute_action_raises_when_action6_missing_coordinates() -> None:
+    client = ArcClient(base_url="https://api.arcprize.org", api_key="test-api-key")
+
+    with pytest.raises(ValueError, match="x and y are required for action 6"):
+        await client.execute_action(guid="guid-1", action=6, x=None, y=1)
