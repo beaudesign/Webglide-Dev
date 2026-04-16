@@ -3,10 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cuga-arc3"
+name = "cuga-arc3-rebuild"
 version = "0.1.0"
 description = "CUGA ARC3 rebuild MVP"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "httpx",
     "pydantic",
