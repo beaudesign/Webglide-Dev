@@ -5,14 +5,35 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class StageProfile:
-    reflection: bool
-    tool_priors: bool
-    multi_agent: bool
+    stage: str
+    reflection_enabled: bool
+    tool_priors_enabled: bool
+    multi_agent_enabled: bool
 
 
 STAGE_PROFILES: dict[str, StageProfile] = {
-    "S0": StageProfile(reflection=False, tool_priors=False, multi_agent=False),
-    "S1": StageProfile(reflection=True, tool_priors=False, multi_agent=False),
-    "S2": StageProfile(reflection=True, tool_priors=True, multi_agent=False),
-    "S3": StageProfile(reflection=True, tool_priors=True, multi_agent=True),
+    "S0": StageProfile(
+        stage="S0",
+        reflection_enabled=False,
+        tool_priors_enabled=False,
+        multi_agent_enabled=False,
+    ),
+    "S1": StageProfile(
+        stage="S1",
+        reflection_enabled=True,
+        tool_priors_enabled=False,
+        multi_agent_enabled=False,
+    ),
+    "S2": StageProfile(
+        stage="S2",
+        reflection_enabled=True,
+        tool_priors_enabled=True,
+        multi_agent_enabled=False,
+    ),
+    "S3": StageProfile(
+        stage="S3",
+        reflection_enabled=True,
+        tool_priors_enabled=True,
+        multi_agent_enabled=True,
+    ),
 }
