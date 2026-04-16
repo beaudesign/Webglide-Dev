@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
+import yaml
 
 CORE_BENCHMARK_COUNT = 30
 STRESS_BENCHMARK_COUNT = 20
@@ -9,8 +12,8 @@ STRESS_BENCHMARK_COUNT = 20
 
 @dataclass(frozen=True)
 class BenchmarkManifest:
-    core: tuple[str, ...]
-    stress: tuple[str, ...]
+    core: list[str]
+    stress: list[str]
 
     @property
     def total_games(self) -> int:
@@ -29,12 +32,24 @@ class BenchmarkManifest:
             section="stress",
             expected_count=STRESS_BENCHMARK_COUNT,
         )
+
+        if set(core).intersection(stress):
+            raise ValueError("manifest sections 'core' and 'stress' must not overlap")
+
         return cls(core=core, stress=stress)
+
+    @classmethod
+    def from_yaml_path(cls, path: str | Path) -> "BenchmarkManifest":
+        manifest_path = Path(path)
+        with manifest_path.open("r", encoding="utf-8") as manifest_file:
+            raw_manifest = yaml.safe_load(manifest_file)
+
+        return cls.from_dict(raw_manifest)
 
     @staticmethod
     def _validate_game_ids(
         game_ids: Any, *, section: str, expected_count: int
-    ) -> tuple[str, ...]:
+    ) -> list[str]:
         if not isinstance(game_ids, list):
             raise ValueError(f"manifest section '{section}' must be a list of game ids")
 
@@ -48,4 +63,7 @@ class BenchmarkManifest:
                 f"manifest section '{section}' must only contain non-empty string game ids"
             )
 
-        return tuple(game_ids)
+        if len(set(game_ids)) != len(game_ids):
+            raise ValueError(f"manifest section '{section}' contains duplicate ids")
+
+        return game_ids

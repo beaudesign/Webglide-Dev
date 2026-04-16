@@ -2,26 +2,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from cuga_arc3.eval.manifest import BenchmarkManifest
+
 
 @dataclass(frozen=True)
 class StageMetrics:
     stage: str
-    wins: int
+    solved_count: int
     total_games: int
 
     @property
     def win_rate(self) -> float:
         if self.total_games == 0:
             return 0.0
-        return self.wins / self.total_games
+        return self.solved_count / self.total_games
 
 
-def compute_stage_metrics(*, stage: str, wins: int, total_games: int) -> StageMetrics:
-    if total_games < 0:
-        raise ValueError("total_games must be non-negative")
-    if wins < 0:
-        raise ValueError("wins must be non-negative")
-    if wins > total_games:
-        raise ValueError("wins cannot exceed total_games")
+def compute_stage_metrics(
+    stage: str, solved_game_ids: list[str], manifest: BenchmarkManifest
+) -> StageMetrics:
+    manifest_ids = set(manifest.core).union(manifest.stress)
+    solved_ids = set(solved_game_ids)
+    solved_count = len(solved_ids.intersection(manifest_ids))
+    total_games = manifest.total_games
 
-    return StageMetrics(stage=stage, wins=wins, total_games=total_games)
+    return StageMetrics(stage=stage, solved_count=solved_count, total_games=total_games)
