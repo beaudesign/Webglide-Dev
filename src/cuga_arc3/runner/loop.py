@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from cuga_arc3.policy.gates import PolicyProfile, check_action
 from cuga_arc3.runner.events import (
     PAYLOAD_KEY_RETRY_COUNT,
     PAYLOAD_KEY_STATE,
@@ -18,6 +19,7 @@ class RunnerLoop:
     max_steps: int
     max_retries: int = 3
     force_retries: int = 0
+    policy_profile: PolicyProfile | None = None
 
     def simulate(self, game_id: str) -> list[TraceEvent]:
         events: list[TraceEvent] = []
@@ -41,6 +43,34 @@ class RunnerLoop:
                 continue
 
             if context.state is RunState.ACT:
+                action_num = 1
+                if self.policy_profile is not None:
+                    gate_result = check_action(
+                        action=action_num,
+                        profile=self.policy_profile,
+                    )
+                    events.append(
+                        TraceEvent(
+                            event_type="policy_gate",
+                            stage=context.stage,
+                            game_id=context.game_id,
+                            step_idx=context.step_idx,
+                            payload={
+                                "action": action_num,
+                                "allowed": gate_result.allowed,
+                                "reason": gate_result.reason,
+                                "policy": gate_result.policy_name,
+                            },
+                        )
+                    )
+                    if not gate_result.allowed:
+                        context = replace(
+                            context,
+                            state=RunState.RETRY,
+                            retry_count=context.retry_count + 1,
+                        )
+                        continue
+
                 events.append(
                     TraceEvent(
                         event_type="action_proposed",
@@ -48,7 +78,7 @@ class RunnerLoop:
                         game_id=context.game_id,
                         step_idx=context.step_idx,
                         payload={
-                            "action": 1,
+                            "action": action_num,
                             "rationale": "default action policy",
                         },
                     )
