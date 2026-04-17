@@ -145,6 +145,45 @@ async def test_execute_action_raises_when_action6_missing_coordinates() -> None:
 
 
 @pytest.mark.anyio
+async def test_close_scorecard_sends_card_id() -> None:
+    expected_payload = {"card_id": "card-123"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/scorecards/close"
+        assert json.loads(request.content.decode()) == expected_payload
+        return httpx.Response(status_code=200, json={"status": "closed"})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.close_scorecard(card_id="card-123")
+
+    assert response == {"status": "closed"}
+
+
+@pytest.mark.anyio
+async def test_get_scorecard_uses_card_id_in_path() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/scorecards/card-123"
+        return httpx.Response(status_code=200, json={"card_id": "card-123"})
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await client.get_scorecard(card_id="card-123")
+
+    assert response == {"card_id": "card-123"}
+
+
+@pytest.mark.anyio
 async def test_request_retries_on_429(monkeypatch: pytest.MonkeyPatch) -> None:
     attempts = 0
     sleep_durations: list[float] = []

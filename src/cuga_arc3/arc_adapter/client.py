@@ -61,6 +61,16 @@ class ArcClient:
     async def open_scorecard(self, metadata: dict[str, Any]) -> Any:
         return await self._request("POST", "/scorecards/open", json_body=metadata)
 
+    async def close_scorecard(self, card_id: str) -> dict[str, Any]:
+        return await self._request(
+            "POST",
+            "/scorecards/close",
+            json_body={"card_id": card_id},
+        )
+
+    async def get_scorecard(self, card_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/scorecards/{card_id}")
+
     async def reset_or_start(
         self,
         game_id: str,

@@ -12,7 +12,7 @@ from cuga_arc3.arc_adapter.client import ArcClient
 from cuga_arc3.artifacts.schema import RunArtifact
 from cuga_arc3.artifacts.writer import ArtifactWriter
 from cuga_arc3.config import Settings
-from cuga_arc3.eval.harness import compute_stage_metrics
+from cuga_arc3.eval.harness import compute_live_stage_metrics, compute_stage_metrics
 from cuga_arc3.eval.manifest import BenchmarkManifest
 from cuga_arc3.reporting import stage_lift
 from cuga_arc3.runner.loop import RunnerLoop
@@ -89,6 +89,80 @@ def _trace_has_solved_episode(serialized_events: list[dict[str, object]]) -> boo
         if isinstance(payload, dict):
             return payload.get("stop_reason") == "solved"
     return False
+
+
+async def _run_live_ladder_command(
+    args: argparse.Namespace,
+    manifest: BenchmarkManifest,
+    manifest_path: str | Path,
+    game_ids: list[str],
+) -> None:
+    settings = Settings.from_env_optional()
+    if settings is None:
+        print("ARC_API_KEY not set — --live requires ARC_API_KEY")
+        raise SystemExit(1)
+
+    client = ArcClient(base_url=settings.arc_base_url, api_key=settings.arc_api_key)
+    stages: list[dict[str, object]] = []
+    all_game_traces: list[dict[str, object]] = []
+
+    for stage_key in ["S0", "S1", "S2", "S3"]:
+        scorecard_payload = await client.open_scorecard(
+            {
+                "stage": stage_key,
+                "manifest_path": str(manifest_path),
+                "total_games": len(game_ids),
+            }
+        )
+        card_id = _extract_card_id(scorecard_payload)
+
+        runner = RunnerLoop(
+            stage_profile=STAGE_PROFILES[stage_key],
+            max_steps=settings.max_steps_per_game,
+        )
+        stage_game_traces: list[dict[str, object]] = []
+        for game_id in game_ids:
+            events = await runner.run(game_id=game_id, client=client, card_id=card_id)
+            serialized_events = [event.to_dict() for event in events]
+            stage_game_traces.append({"game_id": game_id, "events": serialized_events})
+
+        scorecard_result = await client.close_scorecard(card_id)
+        metrics = compute_live_stage_metrics(
+            stage=stage_key,
+            game_traces=stage_game_traces,
+            manifest=manifest,
+        )
+        stage_result = {
+            "stage": stage_key,
+            "solved_count": metrics.solved_count,
+            "total_games": metrics.total_games,
+            "win_rate": round(metrics.win_rate, 2),
+            "card_id": card_id,
+            "scorecard_result": scorecard_result,
+        }
+        stages.append(stage_result)
+        all_game_traces.extend(stage_game_traces)
+        print(
+            f"{stage_key} win_rate={stage_result['win_rate']:.2f} "
+            f"({metrics.solved_count}/{metrics.total_games})"
+        )
+
+    baseline = stages[0]
+    lifts = [stage_lift(baseline, candidate) for candidate in stages[1:]]
+    output_path = Path(args.out)
+    artifact = RunArtifact(
+        run_id=output_path.stem,
+        stage="ladder",
+        manifest_path=str(manifest_path),
+        total_games=len(game_ids),
+        created_at=_utc_timestamp(),
+        stages=stages,
+        lifts=lifts,
+        game_traces=all_game_traces,
+    )
+    writer = ArtifactWriter(output_path.parent)
+    json_path, _ = writer.write(artifact)
+    print(f"Wrote ladder report to {json_path}")
 
 
 async def _run_stage_command(args: argparse.Namespace) -> None:
@@ -179,6 +253,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     ladder = subcommands.add_parser("run-ladder")
     ladder.add_argument("--out", required=True)
     ladder.add_argument("--manifest", required=False)
+    ladder.add_argument("--live", action="store_true", default=False)
 
     stage = subcommands.add_parser("run-stage")
     stage.add_argument("--stage", required=True, choices=["S0", "S1", "S2", "S3"])
@@ -192,25 +267,28 @@ def main(argv: Sequence[str] | None = None) -> None:
         manifest_path = args.manifest if args.manifest else _default_manifest_path()
         manifest = BenchmarkManifest.from_yaml_path(manifest_path)
         game_ids = _all_manifest_game_ids(manifest)
-        stages = [_evaluate_stage(stage_key, game_ids) for stage_key in ["S0", "S1", "S2", "S3"]]
-        baseline = stages[0]
-        lifts = [stage_lift(baseline, candidate) for candidate in stages[1:]]
-        output_path = Path(args.out)
-        artifact = RunArtifact(
-            run_id=output_path.stem,
-            stage="ladder",
-            manifest_path=str(manifest_path),
-            total_games=len(game_ids),
-            created_at=_utc_timestamp(),
-            stages=stages,
-            lifts=lifts,
-        )
-        writer = ArtifactWriter(output_path.parent)
-        json_path, _ = writer.write(
-            artifact,
-            include_jsonl=False,
-        )
-        print(f"Wrote ladder report to {json_path}")
+        if args.live:
+            asyncio.run(_run_live_ladder_command(args, manifest, manifest_path, game_ids))
+        else:
+            stages = [_evaluate_stage(stage_key, game_ids) for stage_key in ["S0", "S1", "S2", "S3"]]
+            baseline = stages[0]
+            lifts = [stage_lift(baseline, candidate) for candidate in stages[1:]]
+            output_path = Path(args.out)
+            artifact = RunArtifact(
+                run_id=output_path.stem,
+                stage="ladder",
+                manifest_path=str(manifest_path),
+                total_games=len(game_ids),
+                created_at=_utc_timestamp(),
+                stages=stages,
+                lifts=lifts,
+            )
+            writer = ArtifactWriter(output_path.parent)
+            json_path, _ = writer.write(
+                artifact,
+                include_jsonl=False,
+            )
+            print(f"Wrote ladder report to {json_path}")
 
     if args.cmd == "run-stage":
         asyncio.run(_run_stage_command(args))

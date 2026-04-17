@@ -51,6 +51,35 @@ def compute_stage_metrics(
     return StageMetrics(stage=stage, solved_count=solved_count, total_games=total_games)
 
 
+def compute_live_stage_metrics(
+    stage: str, game_traces: list[dict], manifest: BenchmarkManifest
+) -> StageMetrics:
+    solved_game_ids: list[str] = []
+    for trace in game_traces:
+        if not isinstance(trace, dict):
+            continue
+        game_id = trace.get("game_id")
+        if not isinstance(game_id, str):
+            continue
+        events = trace.get("events")
+        if not isinstance(events, list):
+            continue
+
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            if event.get("event_type") != "episode_end":
+                continue
+            payload = event.get("payload")
+            if not isinstance(payload, dict):
+                continue
+            if payload.get(PAYLOAD_KEY_STOP_REASON) == "solved":
+                solved_game_ids.append(game_id)
+                break
+
+    return compute_stage_metrics(stage=stage, solved_game_ids=solved_game_ids, manifest=manifest)
+
+
 def compute_reliability_metrics(
     stage: str, game_traces: list[dict]
 ) -> ReliabilityMetrics:
