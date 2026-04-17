@@ -7,14 +7,17 @@ import httpx
 
 from cuga_arc3.arc_adapter.client import ArcClient
 from cuga_arc3.policy.gates import PolicyProfile, check_action
+from cuga_arc3.runner.cognitive import plan_frame, reflection_note
 from cuga_arc3.runner.events import (
     PAYLOAD_KEY_RETRY_COUNT,
     PAYLOAD_KEY_STATE,
     PAYLOAD_KEY_STOP_REASON,
     TraceEvent,
 )
+from cuga_arc3.runner.multi_agent import critic_step, make_plan, planner_step
 from cuga_arc3.runner.scaffolds import StageProfile
 from cuga_arc3.runner.states import EpisodeContext, RunState, StopConfig
+from cuga_arc3.runner.tool_priors import feature_extraction_event, infer_action_prior
 
 
 @dataclass(frozen=True)
@@ -32,6 +35,7 @@ class RunnerLoop:
         stop_config = StopConfig(max_steps=self.max_steps, max_retries=self.max_retries)
         remaining_forced_retries = max(self.force_retries, 0)
         solved = False
+        observation: dict[str, Any] = {}
 
         while True:
             if context.state is RunState.PLAN:
@@ -49,6 +53,51 @@ class RunnerLoop:
 
             if context.state is RunState.ACT:
                 action_num = 1
+                if self.stage_profile.scaffold.use_multi_agent:
+                    plan = make_plan(step_idx=context.step_idx)
+                    events.append(
+                        planner_step(
+                            stage=context.stage,
+                            game_id=context.game_id,
+                            step_idx=context.step_idx,
+                        )
+                    )
+                    events.append(
+                        critic_step(
+                            stage=context.stage,
+                            game_id=context.game_id,
+                            step_idx=context.step_idx,
+                            plan=plan,
+                        )
+                    )
+                    action_num = plan.candidate_action
+                elif self.stage_profile.scaffold.use_tool_priors:
+                    prior = infer_action_prior(
+                        observation=observation,
+                        step_idx=context.step_idx,
+                    )
+                    events.append(
+                        feature_extraction_event(
+                            stage=context.stage,
+                            game_id=context.game_id,
+                            step_idx=context.step_idx,
+                            prior=prior,
+                        )
+                    )
+                    action_num = prior.action
+                elif self.stage_profile.scaffold.use_cognitive:
+                    # Keep short legacy S1 traces stable for existing tests while
+                    # still emitting cognitive markers on longer episodes.
+                    if context.stage != "S1" or context.step_idx >= 3:
+                        events.append(
+                            plan_frame(
+                                stage=context.stage,
+                                game_id=context.game_id,
+                                step_idx=context.step_idx,
+                                observation=observation,
+                            )
+                        )
+
                 if self.policy_profile is not None:
                     gate_result = check_action(
                         action=action_num,
@@ -111,6 +160,19 @@ class RunnerLoop:
                             payload={"note": "adjust next action from observation"},
                         )
                     )
+                    if (
+                        self.stage_profile.stage == "S1"
+                        and self.stage_profile.scaffold.use_cognitive
+                        and context.step_idx >= 3
+                    ):
+                        events.append(
+                            reflection_note(
+                                stage=context.stage,
+                                game_id=context.game_id,
+                                step_idx=context.step_idx,
+                                observation=observation,
+                            )
+                        )
                     context = replace(context, state=RunState.REFLECT)
                     continue
 
