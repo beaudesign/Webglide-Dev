@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
+from cuga_arc3.arc_adapter.client import ArcClient
 from cuga_arc3.artifacts.schema import RunArtifact
 from cuga_arc3.artifacts.writer import ArtifactWriter
+from cuga_arc3.config import Settings
 from cuga_arc3.eval.harness import compute_stage_metrics
 from cuga_arc3.eval.manifest import BenchmarkManifest
 from cuga_arc3.reporting import stage_lift
@@ -69,6 +72,106 @@ def _default_stage_output_path(stage: str) -> Path:
     return Path("artifacts") / f"stage-{stage.lower()}-smoke.json"
 
 
+def _extract_card_id(scorecard_payload: object) -> str:
+    if isinstance(scorecard_payload, dict):
+        for key in ("card_id", "id", "guid"):
+            value = scorecard_payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+    raise ValueError("open_scorecard response must include card_id, id, or guid")
+
+
+def _trace_has_solved_episode(serialized_events: list[dict[str, object]]) -> bool:
+    for event in reversed(serialized_events):
+        if event.get("event_type") != "episode_end":
+            continue
+        payload = event.get("payload")
+        if isinstance(payload, dict):
+            return payload.get("stop_reason") == "solved"
+    return False
+
+
+async def _run_stage_command(args: argparse.Namespace) -> None:
+    manifest = BenchmarkManifest.from_yaml_path(args.manifest)
+    all_game_ids = [*manifest.core, *manifest.stress]
+    processed_game_ids = all_game_ids[: max(args.limit, 0)]
+    stage_profile = STAGE_PROFILES[args.stage]
+    runner = RunnerLoop(stage_profile=stage_profile, max_steps=2)
+    settings = Settings.from_env_optional()
+    use_live_execution = settings is not None
+
+    client: ArcClient | None = None
+    card_id: str | None = None
+    if use_live_execution and settings is not None:
+        client = ArcClient(base_url=settings.arc_base_url, api_key=settings.arc_api_key)
+        scorecard_payload = await client.open_scorecard(
+            {
+                "stage": args.stage,
+                "manifest_path": args.manifest,
+                "total_games": len(processed_game_ids),
+                "created_at": _utc_timestamp(),
+            }
+        )
+        card_id = _extract_card_id(scorecard_payload)
+    else:
+        print("ARC_API_KEY not set — running in simulation mode")
+
+    game_traces: list[dict[str, object]] = []
+    event_counts: Counter[str] = Counter()
+    total_events = 0
+    solved_game_ids_live: list[str] = []
+    for game_id in processed_game_ids:
+        if use_live_execution:
+            if client is None or card_id is None:
+                raise RuntimeError("Live execution requested without initialized ARC client")
+            events = await runner.run(game_id=game_id, client=client, card_id=card_id)
+        else:
+            events = runner.simulate(game_id)
+
+        serialized_events = [event.to_dict() for event in events]
+        game_traces.append({"game_id": game_id, "events": serialized_events})
+        event_counts.update(event["event_type"] for event in serialized_events)
+        total_events += len(serialized_events)
+        if use_live_execution and _trace_has_solved_episode(serialized_events):
+            solved_game_ids_live.append(game_id)
+
+    solved_game_ids = (
+        solved_game_ids_live
+        if use_live_execution
+        else _deterministic_solved_game_ids(args.stage, processed_game_ids)
+    )
+    report = {
+        "stage": args.stage,
+        "manifest_path": args.manifest,
+        "processed_game_ids": processed_game_ids,
+        "total_processed": len(processed_game_ids),
+        "game_traces": game_traces,
+        "summary": {
+            "status": "smoke_complete",
+            "succeeded": len(solved_game_ids),
+            "failed": len(processed_game_ids) - len(solved_game_ids),
+            "solved_game_ids": solved_game_ids,
+            "event_counts": dict(event_counts),
+            "total_events": total_events,
+        },
+    }
+    output_path = Path(args.out) if args.out else _default_stage_output_path(args.stage)
+    artifact = RunArtifact(
+        run_id=output_path.stem,
+        stage=args.stage,
+        manifest_path=args.manifest,
+        total_games=len(processed_game_ids),
+        created_at=_utc_timestamp(),
+        stages=[_evaluate_stage(args.stage, processed_game_ids)],
+        lifts=[],
+        game_traces=report["game_traces"],
+        summary=report["summary"],
+    )
+    writer = ArtifactWriter(output_path.parent)
+    json_path, _ = writer.write(artifact)
+    print(f"Completed {args.stage} smoke run for {len(processed_game_ids)} games -> {json_path}")
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="cuga-arc3")
     subcommands = parser.add_subparsers(dest="cmd", required=True)
@@ -110,54 +213,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         print(f"Wrote ladder report to {json_path}")
 
     if args.cmd == "run-stage":
-        manifest = BenchmarkManifest.from_yaml_path(args.manifest)
-        all_game_ids = [*manifest.core, *manifest.stress]
-        processed_game_ids = all_game_ids[: max(args.limit, 0)]
-        stage_profile = STAGE_PROFILES[args.stage]
-        runner = RunnerLoop(stage_profile=stage_profile, max_steps=2)
-        game_traces: list[dict[str, object]] = []
-        event_counts: Counter[str] = Counter()
-        total_events = 0
-        for game_id in processed_game_ids:
-            events = runner.simulate(game_id)
-            serialized_events = [event.to_dict() for event in events]
-            game_traces.append({"game_id": game_id, "events": serialized_events})
-            event_counts.update(event["event_type"] for event in serialized_events)
-            total_events += len(serialized_events)
-
-        solved_game_ids = _deterministic_solved_game_ids(args.stage, processed_game_ids)
-        report = {
-            "stage": args.stage,
-            "manifest_path": args.manifest,
-            "processed_game_ids": processed_game_ids,
-            "total_processed": len(processed_game_ids),
-            "game_traces": game_traces,
-            "summary": {
-                "status": "smoke_complete",
-                "succeeded": len(solved_game_ids),
-                "failed": len(processed_game_ids) - len(solved_game_ids),
-                "solved_game_ids": solved_game_ids,
-                "event_counts": dict(event_counts),
-                "total_events": total_events,
-            },
-        }
-        output_path = Path(args.out) if args.out else _default_stage_output_path(args.stage)
-        artifact = RunArtifact(
-            run_id=output_path.stem,
-            stage=args.stage,
-            manifest_path=args.manifest,
-            total_games=len(processed_game_ids),
-            created_at=_utc_timestamp(),
-            stages=[_evaluate_stage(args.stage, processed_game_ids)],
-            lifts=[],
-            game_traces=report["game_traces"],
-            summary=report["summary"],
-        )
-        writer = ArtifactWriter(output_path.parent)
-        json_path, _ = writer.write(artifact)
-        print(
-            f"Completed {args.stage} smoke run for {len(processed_game_ids)} games -> {json_path}"
-        )
+        asyncio.run(_run_stage_command(args))
 
 
 if __name__ == "__main__":

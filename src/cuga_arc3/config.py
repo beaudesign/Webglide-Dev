@@ -18,3 +18,11 @@ class Settings:
             raise ValueError("ARC_API_KEY is required")
 
         return cls(arc_api_key=arc_api_key)
+
+    @classmethod
+    def from_env_optional(cls) -> "Settings | None":
+        arc_api_key = os.getenv("ARC_API_KEY", "").strip()
+        if not arc_api_key:
+            return None
+
+        return cls(arc_api_key=arc_api_key)

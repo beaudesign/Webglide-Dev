@@ -142,3 +142,38 @@ async def test_execute_action_raises_when_action6_missing_coordinates() -> None:
 
     with pytest.raises(ValueError, match="x and y are required for action 6"):
         await client.execute_action(guid="guid-1", action=6, x=None, y=1)
+
+
+@pytest.mark.anyio
+async def test_request_retries_on_429(monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts = 0
+    sleep_durations: list[float] = []
+
+    async def fake_sleep(duration: float) -> None:
+        sleep_durations.append(duration)
+
+    monkeypatch.setattr("cuga_arc3.arc_adapter.client.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("cuga_arc3.arc_adapter.client.random.uniform", lambda _a, _b: 0.0)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            return httpx.Response(
+                status_code=429,
+                request=request,
+                json={"error": "rate_limited"},
+            )
+        return httpx.Response(status_code=200, request=request, json=[{"id": "game-1"}])
+
+    client = ArcClient(
+        base_url="https://api.arcprize.org",
+        api_key="test-api-key",
+        transport=httpx.MockTransport(handler),
+    )
+
+    games = await client.list_games()
+
+    assert games == [{"id": "game-1"}]
+    assert attempts == 3
+    assert sleep_durations == [1.0, 2.0]

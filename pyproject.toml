@@ -21,6 +21,7 @@ cuga-arc3 = "cuga_arc3.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",
+    "pytest-asyncio>=1.3.0",
 ]
 
 [tool.pytest.ini_options]

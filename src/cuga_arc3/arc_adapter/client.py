@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import random
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,6 +13,7 @@ class ArcClient:
     base_url: str
     api_key: str
     transport: httpx.AsyncBaseTransport | None = None
+    max_retries: int = 3
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}
@@ -21,20 +24,36 @@ class ArcClient:
         path: str,
         json_body: dict[str, Any] | None = None,
     ) -> Any:
-        async with httpx.AsyncClient(
-            base_url=self.base_url,
-            transport=self.transport,
-            timeout=30.0,
-        ) as client:
-            response = await client.request(
-                method=method,
-                url=path,
-                headers=self._headers(),
-                json=json_body,
-            )
+        retry_limit = max(self.max_retries, 0)
+        for attempt in range(retry_limit + 1):
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
+                transport=self.transport,
+                timeout=30.0,
+            ) as client:
+                response = await client.request(
+                    method=method,
+                    url=path,
+                    headers=self._headers(),
+                    json=json_body,
+                )
 
-        response.raise_for_status()
-        return response.json()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError:
+                status_code = response.status_code
+                retriable = status_code == 429 or 500 <= status_code < 600
+                if not retriable or attempt >= retry_limit:
+                    raise
+
+                backoff_seconds = float(2**attempt)
+                jitter_seconds = random.uniform(0.0, 0.5)
+                await asyncio.sleep(backoff_seconds + jitter_seconds)
+                continue
+
+            return response.json()
+
+        raise RuntimeError("unreachable")
 
     async def list_games(self) -> list[dict[str, Any]]:
         return await self._request("GET", "/games")
