@@ -26,6 +26,8 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+# Run e2e-only suite: uv run pytest tests/e2e/ -v -m e2e
+markers = ["e2e: end-to-end regression tests", "unit: unit tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cuga_arc3"]

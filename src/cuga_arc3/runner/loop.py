@@ -20,6 +20,7 @@ class RunnerLoop:
     max_retries: int = 3
     force_retries: int = 0
     policy_profile: PolicyProfile | None = None
+    seed: int = 0
 
     def simulate(self, game_id: str) -> list[TraceEvent]:
         events: list[TraceEvent] = []
