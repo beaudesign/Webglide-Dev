@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from cuga_arc3.eval.harness import ReliabilityMetrics
+
 
 def stage_lift(
     baseline: dict[str, str | float], candidate: dict[str, str | float]
@@ -17,4 +19,21 @@ def stage_lift(
         "to_stage": str(candidate["stage"]),
         "absolute_lift": absolute_lift,
         "relative_lift_pct": relative_lift_pct,
+    }
+
+
+def reliability_delta(
+    baseline: ReliabilityMetrics, candidate: ReliabilityMetrics
+) -> dict[str, str | float | int]:
+    return {
+        "from_stage": baseline.stage,
+        "to_stage": candidate.stage,
+        "abort_rate_delta": round(candidate.abort_rate - baseline.abort_rate, 4),
+        "mean_retries_delta": round(
+            candidate.mean_retries - baseline.mean_retries,
+            4,
+        ),
+        "invalid_action_delta": (
+            candidate.invalid_action_count - baseline.invalid_action_count
+        ),
     }

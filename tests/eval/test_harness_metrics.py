@@ -36,3 +36,27 @@ def test_stage_lift_from_baseline() -> None:
 
     assert report["absolute_lift"] == 0.14
     assert report["relative_lift_pct"] == 63.64
+
+
+def test_compute_stage_metrics_handles_empty_manifest() -> None:
+    manifest = BenchmarkManifest(core=[], stress=[])
+
+    metrics = compute_stage_metrics(stage="S0", solved_game_ids=["unknown"], manifest=manifest)
+
+    assert metrics.solved_count == 0
+    assert metrics.total_games == 0
+    assert metrics.win_rate == 0.0
+
+
+def test_compute_stage_metrics_deduplicates_solved_game_ids() -> None:
+    manifest = BenchmarkManifest(core=["core-01", "core-02"], stress=[])
+
+    metrics = compute_stage_metrics(
+        stage="S1",
+        solved_game_ids=["core-01", "core-01", "core-02", "outside"],
+        manifest=manifest,
+    )
+
+    assert metrics.solved_count == 2
+    assert metrics.total_games == 2
+    assert metrics.win_rate == 1.0
