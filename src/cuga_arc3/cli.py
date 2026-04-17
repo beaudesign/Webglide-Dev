@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
+from cuga_arc3.artifacts.schema import RunArtifact
+from cuga_arc3.artifacts.writer import ArtifactWriter
 from cuga_arc3.eval.harness import compute_stage_metrics
 from cuga_arc3.eval.manifest import BenchmarkManifest
 from cuga_arc3.reporting import stage_lift
@@ -14,21 +16,8 @@ from cuga_arc3.runner.loop import RunnerLoop
 from cuga_arc3.runner.scaffolds import STAGE_PROFILES
 
 
-def _write_json_artifact(output_path: Path, payload: dict) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-
-def _write_trace_jsonl(output_path: Path, game_traces: list[dict[str, object]]) -> None:
-    jsonl_path = output_path.with_suffix(".jsonl")
-    jsonl_path.parent.mkdir(parents=True, exist_ok=True)
-    with jsonl_path.open("w", encoding="utf-8") as trace_file:
-        for game_trace in game_traces:
-            events = game_trace["events"]
-            if not isinstance(events, list):
-                continue
-            for event in events:
-                trace_file.write(json.dumps(event) + "\n")
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _default_manifest_path() -> Path:
@@ -104,11 +93,21 @@ def main(argv: Sequence[str] | None = None) -> None:
         baseline = stages[0]
         lifts = [stage_lift(baseline, candidate) for candidate in stages[1:]]
         output_path = Path(args.out)
-        _write_json_artifact(
-            output_path,
-            {"manifest_path": str(manifest_path), "total_games": len(game_ids), "stages": stages, "lifts": lifts},
+        artifact = RunArtifact(
+            run_id=output_path.stem,
+            stage="ladder",
+            manifest_path=str(manifest_path),
+            total_games=len(game_ids),
+            created_at=_utc_timestamp(),
+            stages=stages,
+            lifts=lifts,
         )
-        print(f"Wrote ladder report to {output_path}")
+        writer = ArtifactWriter(output_path.parent)
+        json_path, _ = writer.write(
+            artifact,
+            include_jsonl=False,
+        )
+        print(f"Wrote ladder report to {json_path}")
 
     if args.cmd == "run-stage":
         manifest = BenchmarkManifest.from_yaml_path(args.manifest)
@@ -143,10 +142,21 @@ def main(argv: Sequence[str] | None = None) -> None:
             },
         }
         output_path = Path(args.out) if args.out else _default_stage_output_path(args.stage)
-        _write_json_artifact(output_path, report)
-        _write_trace_jsonl(output_path, game_traces)
+        artifact = RunArtifact(
+            run_id=output_path.stem,
+            stage=args.stage,
+            manifest_path=args.manifest,
+            total_games=len(processed_game_ids),
+            created_at=_utc_timestamp(),
+            stages=[_evaluate_stage(args.stage, processed_game_ids)],
+            lifts=[],
+            game_traces=report["game_traces"],
+            summary=report["summary"],
+        )
+        writer = ArtifactWriter(output_path.parent)
+        json_path, _ = writer.write(artifact)
         print(
-            f"Completed {args.stage} smoke run for {len(processed_game_ids)} games -> {output_path}"
+            f"Completed {args.stage} smoke run for {len(processed_game_ids)} games -> {json_path}"
         )
 
 
