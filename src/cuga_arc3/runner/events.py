@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+PAYLOAD_KEY_STOP_REASON = "stop_reason"
+PAYLOAD_KEY_RETRY_COUNT = "retry_count"
+PAYLOAD_KEY_STATE = "state"
+
 
 def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
