@@ -31,7 +31,11 @@ def test_run_ladder_writes_stages_and_lifts(tmp_path: Path) -> None:
     assert all(lift["from_stage"] == "S0" for lift in report["lifts"])
 
 
-def test_run_stage_writes_smoke_summary_for_limited_games(tmp_path: Path) -> None:
+def test_run_stage_writes_smoke_summary_for_limited_games(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    import pytest
+    monkeypatch.delenv("ARC_API_KEY", raising=False)  # type: ignore[attr-defined]
     output_path = tmp_path / "artifacts" / "stage-s0-smoke.json"
     trace_jsonl_path = tmp_path / "artifacts" / "stage-s0-smoke.jsonl"
     manifest_path = (

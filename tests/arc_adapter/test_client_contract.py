@@ -19,7 +19,7 @@ async def test_list_games_sends_api_key_header_and_returns_json_list() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     games = await client.list_games()
@@ -40,7 +40,7 @@ async def test_open_scorecard_posts_metadata_payload() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.open_scorecard(metadata)
@@ -61,7 +61,7 @@ async def test_reset_or_start_posts_required_fields_without_guid() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.reset_or_start(game_id="game-1", card_id="card-1")
@@ -82,7 +82,7 @@ async def test_reset_or_start_posts_guid_when_provided() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.reset_or_start(
@@ -96,7 +96,7 @@ async def test_reset_or_start_posts_guid_when_provided() -> None:
 
 @pytest.mark.anyio
 async def test_execute_action_uses_action6_endpoint_with_coordinates_payload() -> None:
-    expected_payload = {"guid": "guid-1", "x": 3, "y": 4}
+    expected_payload = {"guid": "guid-1", "game_id": "", "x": 3, "y": 4}
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
@@ -107,7 +107,7 @@ async def test_execute_action_uses_action6_endpoint_with_coordinates_payload() -
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.execute_action(guid="guid-1", action=6, x=3, y=4)
@@ -117,7 +117,7 @@ async def test_execute_action_uses_action6_endpoint_with_coordinates_payload() -
 
 @pytest.mark.anyio
 async def test_execute_action_uses_action_number_endpoint_for_non_6() -> None:
-    expected_payload = {"guid": "guid-1"}
+    expected_payload = {"guid": "guid-1", "game_id": ""}
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
@@ -128,7 +128,7 @@ async def test_execute_action_uses_action_number_endpoint_for_non_6() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.execute_action(guid="guid-1", action=4)
@@ -157,7 +157,7 @@ async def test_close_scorecard_sends_card_id() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.close_scorecard(card_id="card-123")
@@ -175,7 +175,7 @@ async def test_get_scorecard_uses_card_id_in_path() -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     response = await client.get_scorecard(card_id="card-123")
@@ -208,7 +208,7 @@ async def test_request_retries_on_429(monkeypatch: pytest.MonkeyPatch) -> None:
     client = ArcClient(
         base_url="https://three.arcprize.org",
         api_key="test-api-key",
-        transport=httpx.MockTransport(handler),
+        _transport=httpx.MockTransport(handler),
     )
 
     games = await client.list_games()

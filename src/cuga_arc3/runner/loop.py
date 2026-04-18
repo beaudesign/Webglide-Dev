@@ -326,7 +326,9 @@ class RunnerLoop:
                     raise RuntimeError("Missing guid before action execution")
 
                 try:
-                    action_response = await client.execute_action(guid, action_num)
+                    action_response = await client.execute_action(
+                        guid, action_num, game_id=game_id
+                    )
                 except httpx.HTTPStatusError as error:
                     events.append(
                         TraceEvent(

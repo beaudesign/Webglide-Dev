@@ -1,0 +1,323 @@
+{
+  "artifact_version": "1.0",
+  "run_id": "stage-s0-smoke",
+  "stage": "S0",
+  "manifest_path": "benchmark/manifests/arc3-live-25.yaml",
+  "total_games": 3,
+  "created_at": "2026-04-18T11:20:05.656683+00:00",
+  "stages": [
+    {
+      "stage": "S0",
+      "solved_count": 1,
+      "total_games": 3,
+      "win_rate": 0.33
+    }
+  ],
+  "lifts": [],
+  "game_traces": [
+    {
+      "game_id": "m0r0-492f87ba",
+      "events": [
+        {
+          "event_type": "plan_updated",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 0,
+          "payload": {
+            "plan": "initial plan"
+          },
+          "timestamp": "2026-04-18T11:20:02.737576+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:03.130398+00:00"
+        },
+        {
+          "event_type": "retry",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 1,
+          "payload": {
+            "retry_count": 1,
+            "state": "ACT"
+          },
+          "timestamp": "2026-04-18T11:20:03.130513+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:03.268036+00:00"
+        },
+        {
+          "event_type": "retry",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 1,
+          "payload": {
+            "retry_count": 2,
+            "state": "ACT"
+          },
+          "timestamp": "2026-04-18T11:20:03.268089+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:03.663329+00:00"
+        },
+        {
+          "event_type": "episode_end",
+          "stage": "S0",
+          "game_id": "m0r0-492f87ba",
+          "step_idx": 1,
+          "payload": {
+            "stop_reason": "aborted_max_retries",
+            "retry_count": 3,
+            "state": "ABORT",
+            "status": "terminated"
+          },
+          "timestamp": "2026-04-18T11:20:03.663440+00:00"
+        }
+      ]
+    },
+    {
+      "game_id": "s5i5-18d95033",
+      "events": [
+        {
+          "event_type": "plan_updated",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 0,
+          "payload": {
+            "plan": "initial plan"
+          },
+          "timestamp": "2026-04-18T11:20:04.113962+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:04.251216+00:00"
+        },
+        {
+          "event_type": "retry",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 1,
+          "payload": {
+            "retry_count": 1,
+            "state": "ACT"
+          },
+          "timestamp": "2026-04-18T11:20:04.251276+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:04.652112+00:00"
+        },
+        {
+          "event_type": "retry",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 1,
+          "payload": {
+            "retry_count": 2,
+            "state": "ACT"
+          },
+          "timestamp": "2026-04-18T11:20:04.652204+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:04.791789+00:00"
+        },
+        {
+          "event_type": "episode_end",
+          "stage": "S0",
+          "game_id": "s5i5-18d95033",
+          "step_idx": 1,
+          "payload": {
+            "stop_reason": "aborted_max_retries",
+            "retry_count": 3,
+            "state": "ABORT",
+            "status": "terminated"
+          },
+          "timestamp": "2026-04-18T11:20:04.791871+00:00"
+        }
+      ]
+    },
+    {
+      "game_id": "ls20-9607627b",
+      "events": [
+        {
+          "event_type": "plan_updated",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 0,
+          "payload": {
+            "plan": "initial plan"
+          },
+          "timestamp": "2026-04-18T11:20:04.987575+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:05.381018+00:00"
+        },
+        {
+          "event_type": "retry",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 1,
+          "payload": {
+            "retry_count": 1,
+            "state": "ACT"
+          },
+          "timestamp": "2026-04-18T11:20:05.381049+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:05.518230+00:00"
+        },
+        {
+          "event_type": "retry",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 1,
+          "payload": {
+            "retry_count": 2,
+            "state": "ACT"
+          },
+          "timestamp": "2026-04-18T11:20:05.518281+00:00"
+        },
+        {
+          "event_type": "action_proposed",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 1,
+          "payload": {
+            "action": 1,
+            "rationale": "default action policy",
+            "error": {
+              "message": "Client error '400 Bad Request' for url 'https://three.arcprize.org/api/cmd/ACTION1'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+              "status_code": 400
+            }
+          },
+          "timestamp": "2026-04-18T11:20:05.656017+00:00"
+        },
+        {
+          "event_type": "episode_end",
+          "stage": "S0",
+          "game_id": "ls20-9607627b",
+          "step_idx": 1,
+          "payload": {
+            "stop_reason": "aborted_max_retries",
+            "retry_count": 3,
+            "state": "ABORT",
+            "status": "terminated"
+          },
+          "timestamp": "2026-04-18T11:20:05.656136+00:00"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "status": "smoke_complete",
+    "succeeded": 0,
+    "failed": 3,
+    "solved_game_ids": [],
+    "event_counts": {
+      "plan_updated": 3,
+      "action_proposed": 9,
+      "retry": 6,
+      "episode_end": 3
+    },
+    "total_events": 21
+  },
+  "processed_game_ids": [
+    "m0r0-492f87ba",
+    "s5i5-18d95033",
+    "ls20-9607627b"
+  ],
+  "total_processed": 3
+}

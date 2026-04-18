@@ -166,7 +166,10 @@ async def _run_live_ladder_command(
 
 
 async def _run_stage_command(args: argparse.Namespace) -> None:
-    manifest = BenchmarkManifest.from_yaml_path(args.manifest)
+    try:
+        manifest = BenchmarkManifest.from_yaml_path(args.manifest)
+    except ValueError:
+        manifest = BenchmarkManifest.from_yaml_path_flexible(args.manifest)
     all_game_ids = [*manifest.core, *manifest.stress]
     processed_game_ids = all_game_ids[: max(args.limit, 0)]
     stage_profile = STAGE_PROFILES[args.stage]
@@ -174,40 +177,40 @@ async def _run_stage_command(args: argparse.Namespace) -> None:
     settings = Settings.from_env_optional()
     use_live_execution = settings is not None
 
-    client: ArcClient | None = None
-    card_id: str | None = None
-    if use_live_execution and settings is not None:
-        client = ArcClient(base_url=settings.arc_base_url, api_key=settings.arc_api_key)
-        scorecard_payload = await client.open_scorecard(
-            {
-                "stage": args.stage,
-                "manifest_path": args.manifest,
-                "total_games": len(processed_game_ids),
-                "created_at": _utc_timestamp(),
-            }
-        )
-        card_id = _extract_card_id(scorecard_payload)
-    else:
-        print("ARC_API_KEY not set — running in simulation mode")
-
     game_traces: list[dict[str, object]] = []
     event_counts: Counter[str] = Counter()
     total_events = 0
     solved_game_ids_live: list[str] = []
-    for game_id in processed_game_ids:
-        if use_live_execution:
-            if client is None or card_id is None:
-                raise RuntimeError("Live execution requested without initialized ARC client")
-            events = await runner.run(game_id=game_id, client=client, card_id=card_id)
-        else:
-            events = runner.simulate(game_id)
 
-        serialized_events = [event.to_dict() for event in events]
-        game_traces.append({"game_id": game_id, "events": serialized_events})
-        event_counts.update(event["event_type"] for event in serialized_events)
-        total_events += len(serialized_events)
-        if use_live_execution and _trace_has_solved_episode(serialized_events):
-            solved_game_ids_live.append(game_id)
+    if use_live_execution and settings is not None:
+        async with ArcClient(
+            base_url=settings.arc_base_url, api_key=settings.arc_api_key
+        ) as client:
+            scorecard_payload = await client.open_scorecard(
+                {
+                    "stage": args.stage,
+                    "manifest_path": args.manifest,
+                    "total_games": len(processed_game_ids),
+                    "created_at": _utc_timestamp(),
+                }
+            )
+            card_id = _extract_card_id(scorecard_payload)
+            for game_id in processed_game_ids:
+                events = await runner.run(game_id=game_id, client=client, card_id=card_id)
+                serialized_events = [event.to_dict() for event in events]
+                game_traces.append({"game_id": game_id, "events": serialized_events})
+                event_counts.update(event["event_type"] for event in serialized_events)
+                total_events += len(serialized_events)
+                if _trace_has_solved_episode(serialized_events):
+                    solved_game_ids_live.append(game_id)
+    else:
+        print("ARC_API_KEY not set — running in simulation mode")
+        for game_id in processed_game_ids:
+            events = runner.simulate(game_id)
+            serialized_events = [event.to_dict() for event in events]
+            game_traces.append({"game_id": game_id, "events": serialized_events})
+            event_counts.update(event["event_type"] for event in serialized_events)
+            total_events += len(serialized_events)
 
     solved_game_ids = (
         solved_game_ids_live

@@ -1,0 +1,15 @@
+{
+  "stage": "S0",
+  "manifest_path": "benchmark/manifests/arc3-core30-stress20.yaml",
+  "processed_game_ids": [
+    "core-01",
+    "core-02",
+    "core-03"
+  ],
+  "total_processed": 3,
+  "summary": {
+    "status": "smoke_complete",
+    "succeeded": 3,
+    "failed": 0
+  }
+}

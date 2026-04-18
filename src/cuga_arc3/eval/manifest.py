@@ -46,6 +46,24 @@ class BenchmarkManifest:
 
         return cls.from_dict(raw_manifest)
 
+    @classmethod
+    def from_yaml_path_flexible(cls, path: str | Path) -> "BenchmarkManifest":
+        """Load any manifest without enforcing fixed 30/20 counts."""
+        manifest_path = Path(path)
+        with manifest_path.open("r", encoding="utf-8") as manifest_file:
+            raw_manifest = yaml.safe_load(manifest_file)
+
+        if not isinstance(raw_manifest, dict):
+            raise ValueError("manifest must be a dictionary")
+        core = raw_manifest.get("core", [])
+        stress = raw_manifest.get("stress", [])
+        if not isinstance(core, list) or not isinstance(stress, list):
+            raise ValueError("core and stress must be lists")
+        all_ids = core + stress
+        if len(set(all_ids)) != len(all_ids):
+            raise ValueError("manifest contains duplicate game IDs")
+        return cls(core=list(core), stress=list(stress))
+
     @staticmethod
     def _validate_game_ids(
         game_ids: Any, *, section: str, expected_count: int
