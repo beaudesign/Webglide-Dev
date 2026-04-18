@@ -48,7 +48,7 @@ async def test_live_runner_marks_solved_when_api_returns_solved() -> None:
 
 @pytest.mark.asyncio
 async def test_live_runner_retries_on_http_error() -> None:
-    request = httpx.Request("POST", "https://api.arcprize.org/commands/action1")
+    request = httpx.Request("POST", "https://three.arcprize.org/commands/action1")
     response = httpx.Response(status_code=500, request=request)
     error = httpx.HTTPStatusError(
         "Server error while executing action",

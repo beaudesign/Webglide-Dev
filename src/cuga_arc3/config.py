@@ -7,7 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Settings:
     arc_api_key: str
-    arc_base_url: str = "https://api.arcprize.org"
+    arc_base_url: str = "https://three.arcprize.org"
     default_stage: str = "S0"
     max_steps_per_game: int = 120
 

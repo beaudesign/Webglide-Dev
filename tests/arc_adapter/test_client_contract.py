@@ -7,17 +7,17 @@ from cuga_arc3.arc_adapter.client import ArcClient
 
 
 @pytest.mark.anyio
-async def test_list_games_sends_bearer_token_and_returns_json_list() -> None:
+async def test_list_games_sends_api_key_header_and_returns_json_list() -> None:
     expected_games = [{"id": "game-1"}, {"id": "game-2"}]
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/games"
-        assert request.headers["Authorization"] == "Bearer test-api-key"
+        assert request.url.path == "/api/games"
+        assert request.headers["X-API-Key"] == "test-api-key"
         return httpx.Response(status_code=200, json=expected_games)
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -33,12 +33,12 @@ async def test_open_scorecard_posts_metadata_payload() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/scorecards/open"
+        assert request.url.path == "/api/scorecard/open"
         assert json.loads(request.content.decode()) == metadata
         return httpx.Response(status_code=200, json={"guid": "g-1"})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -54,12 +54,12 @@ async def test_reset_or_start_posts_required_fields_without_guid() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/commands/reset"
+        assert request.url.path == "/api/cmd/RESET"
         assert json.loads(request.content.decode()) == expected_payload
         return httpx.Response(status_code=200, json={"ok": True})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -75,12 +75,12 @@ async def test_reset_or_start_posts_guid_when_provided() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/commands/reset"
+        assert request.url.path == "/api/cmd/RESET"
         assert json.loads(request.content.decode()) == expected_payload
         return httpx.Response(status_code=200, json={"ok": True})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -100,12 +100,12 @@ async def test_execute_action_uses_action6_endpoint_with_coordinates_payload() -
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/commands/action6"
+        assert request.url.path == "/api/cmd/ACTION6"
         assert json.loads(request.content.decode()) == expected_payload
         return httpx.Response(status_code=200, json={"ok": True})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -121,12 +121,12 @@ async def test_execute_action_uses_action_number_endpoint_for_non_6() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/commands/action4"
+        assert request.url.path == "/api/cmd/ACTION4"
         assert json.loads(request.content.decode()) == expected_payload
         return httpx.Response(status_code=200, json={"ok": True})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -138,7 +138,7 @@ async def test_execute_action_uses_action_number_endpoint_for_non_6() -> None:
 
 @pytest.mark.anyio
 async def test_execute_action_raises_when_action6_missing_coordinates() -> None:
-    client = ArcClient(base_url="https://api.arcprize.org", api_key="test-api-key")
+    client = ArcClient(base_url="https://three.arcprize.org", api_key="test-api-key")
 
     with pytest.raises(ValueError, match="x and y are required for action 6"):
         await client.execute_action(guid="guid-1", action=6, x=None, y=1)
@@ -150,12 +150,12 @@ async def test_close_scorecard_sends_card_id() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/scorecards/close"
+        assert request.url.path == "/api/scorecard/close"
         assert json.loads(request.content.decode()) == expected_payload
         return httpx.Response(status_code=200, json={"status": "closed"})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -169,11 +169,11 @@ async def test_close_scorecard_sends_card_id() -> None:
 async def test_get_scorecard_uses_card_id_in_path() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
-        assert request.url.path == "/scorecards/card-123"
+        assert request.url.path == "/api/scorecard/card-123"
         return httpx.Response(status_code=200, json={"card_id": "card-123"})
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )
@@ -206,7 +206,7 @@ async def test_request_retries_on_429(monkeypatch: pytest.MonkeyPatch) -> None:
         return httpx.Response(status_code=200, request=request, json=[{"id": "game-1"}])
 
     client = ArcClient(
-        base_url="https://api.arcprize.org",
+        base_url="https://three.arcprize.org",
         api_key="test-api-key",
         transport=httpx.MockTransport(handler),
     )

@@ -16,7 +16,7 @@ class ArcClient:
     max_retries: int = 3
 
     def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.api_key}"}
+        return {"X-API-Key": self.api_key}
 
     async def _request(
         self,
@@ -56,20 +56,20 @@ class ArcClient:
         raise RuntimeError("unreachable")
 
     async def list_games(self) -> list[dict[str, Any]]:
-        return await self._request("GET", "/games")
+        return await self._request("GET", "/api/games")
 
     async def open_scorecard(self, metadata: dict[str, Any]) -> Any:
-        return await self._request("POST", "/scorecards/open", json_body=metadata)
+        return await self._request("POST", "/api/scorecard/open", json_body=metadata)
 
     async def close_scorecard(self, card_id: str) -> dict[str, Any]:
         return await self._request(
             "POST",
-            "/scorecards/close",
+            "/api/scorecard/close",
             json_body={"card_id": card_id},
         )
 
     async def get_scorecard(self, card_id: str) -> dict[str, Any]:
-        return await self._request("GET", f"/scorecards/{card_id}")
+        return await self._request("GET", f"/api/scorecard/{card_id}")
 
     async def reset_or_start(
         self,
@@ -81,7 +81,7 @@ class ArcClient:
         if guid is not None:
             payload["guid"] = guid
 
-        return await self._request("POST", "/commands/reset", json_body=payload)
+        return await self._request("POST", "/api/cmd/RESET", json_body=payload)
 
     async def execute_action(
         self,
@@ -90,7 +90,7 @@ class ArcClient:
         x: int | None = None,
         y: int | None = None,
     ) -> Any:
-        endpoint = "/commands/action6" if action == 6 else f"/commands/action{action}"
+        endpoint = f"/api/cmd/ACTION{action}"
         payload: dict[str, Any] = {"guid": guid}
         if action == 6:
             if x is None or y is None:
