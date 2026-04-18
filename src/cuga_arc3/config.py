@@ -17,7 +17,8 @@ class Settings:
         if not arc_api_key:
             raise ValueError("ARC_API_KEY is required")
 
-        return cls(arc_api_key=arc_api_key)
+        max_steps = int(os.getenv("ARC_MAX_STEPS_PER_GAME", "120"))
+        return cls(arc_api_key=arc_api_key, max_steps_per_game=max_steps)
 
     @classmethod
     def from_env_optional(cls) -> "Settings | None":
@@ -25,4 +26,5 @@ class Settings:
         if not arc_api_key:
             return None
 
-        return cls(arc_api_key=arc_api_key)
+        max_steps = int(os.getenv("ARC_MAX_STEPS_PER_GAME", "120"))
+        return cls(arc_api_key=arc_api_key, max_steps_per_game=max_steps)

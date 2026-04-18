@@ -36,3 +36,12 @@ def test_from_env_optional_returns_settings_when_key_present(
 
     assert settings is not None
     assert settings.arc_api_key == "test-api-key"
+
+
+def test_settings_reads_max_steps_per_game(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ARC_API_KEY", "k")
+    monkeypatch.setenv("ARC_MAX_STEPS_PER_GAME", "77")
+
+    settings = Settings.from_env()
+
+    assert settings.max_steps_per_game == 77

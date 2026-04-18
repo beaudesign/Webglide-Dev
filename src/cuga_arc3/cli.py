@@ -14,6 +14,7 @@ from cuga_arc3.artifacts.writer import ArtifactWriter
 from cuga_arc3.config import Settings
 from cuga_arc3.eval.harness import compute_live_stage_metrics, compute_stage_metrics
 from cuga_arc3.eval.manifest import BenchmarkManifest
+from cuga_arc3.prompts import resolve_master_prompt
 from cuga_arc3.reporting import stage_lift
 from cuga_arc3.runner.loop import RunnerLoop
 from cuga_arc3.runner.scaffolds import STAGE_PROFILES
@@ -105,6 +106,11 @@ async def _run_live_ladder_command(
     client = ArcClient(base_url=settings.arc_base_url, api_key=settings.arc_api_key)
     stages: list[dict[str, object]] = []
     all_game_traces: list[dict[str, object]] = []
+    master_prompt = resolve_master_prompt(
+        inline=args.master_prompt,
+        file_path=args.master_prompt_file,
+        manifest_master_prompt=manifest.master_prompt,
+    )
 
     for stage_key in ["S0", "S1", "S2", "S3"]:
         scorecard_payload = await client.open_scorecard(
@@ -119,6 +125,7 @@ async def _run_live_ladder_command(
         runner = RunnerLoop(
             stage_profile=STAGE_PROFILES[stage_key],
             max_steps=settings.max_steps_per_game,
+            master_prompt=master_prompt,
         )
         stage_game_traces: list[dict[str, object]] = []
         for game_id in game_ids:
@@ -173,9 +180,23 @@ async def _run_stage_command(args: argparse.Namespace) -> None:
     all_game_ids = [*manifest.core, *manifest.stress]
     processed_game_ids = all_game_ids[: max(args.limit, 0)]
     stage_profile = STAGE_PROFILES[args.stage]
-    runner = RunnerLoop(stage_profile=stage_profile, max_steps=2)
     settings = Settings.from_env_optional()
     use_live_execution = settings is not None
+    master_prompt = resolve_master_prompt(
+        inline=args.master_prompt,
+        file_path=args.master_prompt_file,
+        manifest_master_prompt=manifest.master_prompt,
+    )
+    max_steps = (
+        args.max_steps
+        if args.max_steps is not None
+        else (settings.max_steps_per_game if settings is not None else 2)
+    )
+    runner = RunnerLoop(
+        stage_profile=stage_profile,
+        max_steps=max_steps,
+        master_prompt=master_prompt,
+    )
 
     game_traces: list[dict[str, object]] = []
     event_counts: Counter[str] = Counter()
@@ -217,20 +238,24 @@ async def _run_stage_command(args: argparse.Namespace) -> None:
         if use_live_execution
         else _deterministic_solved_game_ids(args.stage, processed_game_ids)
     )
+    summary: dict[str, object] = {
+        "status": "smoke_complete",
+        "succeeded": len(solved_game_ids),
+        "failed": len(processed_game_ids) - len(solved_game_ids),
+        "solved_game_ids": solved_game_ids,
+        "event_counts": dict(event_counts),
+        "total_events": total_events,
+        "max_steps_per_episode": max_steps,
+    }
+    if master_prompt:
+        summary["master_prompt"] = master_prompt
     report = {
         "stage": args.stage,
         "manifest_path": args.manifest,
         "processed_game_ids": processed_game_ids,
         "total_processed": len(processed_game_ids),
         "game_traces": game_traces,
-        "summary": {
-            "status": "smoke_complete",
-            "succeeded": len(solved_game_ids),
-            "failed": len(processed_game_ids) - len(solved_game_ids),
-            "solved_game_ids": solved_game_ids,
-            "event_counts": dict(event_counts),
-            "total_events": total_events,
-        },
+        "summary": summary,
     }
     output_path = Path(args.out) if args.out else _default_stage_output_path(args.stage)
     artifact = RunArtifact(
@@ -257,12 +282,38 @@ def main(argv: Sequence[str] | None = None) -> None:
     ladder.add_argument("--out", required=True)
     ladder.add_argument("--manifest", required=False)
     ladder.add_argument("--live", action="store_true", default=False)
+    ladder.add_argument(
+        "--master-prompt",
+        default=None,
+        help="Inline system / test master prompt (overrides manifest and env).",
+    )
+    ladder.add_argument(
+        "--master-prompt-file",
+        default=None,
+        help="Path to a text/markdown file used as the test master prompt.",
+    )
 
     stage = subcommands.add_parser("run-stage")
     stage.add_argument("--stage", required=True, choices=["S0", "S1", "S2", "S3"])
     stage.add_argument("--manifest", required=True)
     stage.add_argument("--limit", required=True, type=int)
     stage.add_argument("--out", required=False)
+    stage.add_argument(
+        "--max-steps",
+        type=int,
+        default=None,
+        help="Override max steps per game (default: ARC_MAX_STEPS_PER_GAME when live, else 2 for fast simulation).",
+    )
+    stage.add_argument(
+        "--master-prompt",
+        default=None,
+        help="Inline system / test master prompt (overrides manifest and env).",
+    )
+    stage.add_argument(
+        "--master-prompt-file",
+        default=None,
+        help="Path to a text/markdown file used as the test master prompt.",
+    )
 
     args = parser.parse_args(argv)
 

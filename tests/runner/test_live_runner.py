@@ -20,6 +20,22 @@ def _mock_client(execute_action: AsyncMock | None = None) -> SimpleNamespace:
 
 
 @pytest.mark.asyncio
+async def test_live_runner_emits_test_session_when_master_prompt_set() -> None:
+    runner = RunnerLoop(
+        stage_profile=STAGE_PROFILES["S0"],
+        max_steps=1,
+        master_prompt="ARC-3 system instruction",
+    )
+    client = _mock_client()
+
+    events = await runner.run(game_id="game-prompt", client=client, card_id="card-1")
+
+    session_events = [event for event in events if event.event_type == "test_session"]
+    assert len(session_events) == 1
+    assert session_events[0].payload["master_prompt"] == "ARC-3 system instruction"
+
+
+@pytest.mark.asyncio
 async def test_live_runner_completes_after_max_steps() -> None:
     runner = RunnerLoop(stage_profile=STAGE_PROFILES["S0"], max_steps=2)
     client = _mock_client()

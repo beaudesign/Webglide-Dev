@@ -14,6 +14,7 @@ STRESS_BENCHMARK_COUNT = 20
 class BenchmarkManifest:
     core: list[str]
     stress: list[str]
+    master_prompt: str | None = None
 
     @property
     def total_games(self) -> int:
@@ -36,7 +37,9 @@ class BenchmarkManifest:
         if set(core).intersection(stress):
             raise ValueError("manifest sections 'core' and 'stress' must not overlap")
 
-        return cls(core=core, stress=stress)
+        master_prompt = _parse_optional_master_prompt(raw_manifest.get("master_prompt"))
+
+        return cls(core=core, stress=stress, master_prompt=master_prompt)
 
     @classmethod
     def from_yaml_path(cls, path: str | Path) -> "BenchmarkManifest":
@@ -62,7 +65,8 @@ class BenchmarkManifest:
         all_ids = core + stress
         if len(set(all_ids)) != len(all_ids):
             raise ValueError("manifest contains duplicate game IDs")
-        return cls(core=list(core), stress=list(stress))
+        master_prompt = _parse_optional_master_prompt(raw_manifest.get("master_prompt"))
+        return cls(core=list(core), stress=list(stress), master_prompt=master_prompt)
 
     @staticmethod
     def _validate_game_ids(
@@ -85,3 +89,12 @@ class BenchmarkManifest:
             raise ValueError(f"manifest section '{section}' contains duplicate ids")
 
         return game_ids
+
+
+def _parse_optional_master_prompt(raw: Any) -> str | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise ValueError("master_prompt must be a string when provided")
+    stripped = raw.strip()
+    return stripped if stripped else None

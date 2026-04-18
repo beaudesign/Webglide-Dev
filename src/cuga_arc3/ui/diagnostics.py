@@ -14,6 +14,7 @@ class DiagnosticsPanel:
     reasoning: str
     action: dict[str, Any]
     reflection: str
+    master_prompt: str
     current_state: str
     last_policy_decision: dict[str, Any]
     retry_count: int
@@ -26,6 +27,7 @@ def project_diagnostics(events: list[TraceEvent]) -> DiagnosticsPanel:
     reasoning = ""
     action: dict[str, Any] = {}
     reflection = ""
+    master_prompt = ""
     current_state = ""
     last_policy_decision: dict[str, Any] = {}
     retry_count = 0
@@ -38,7 +40,9 @@ def project_diagnostics(events: list[TraceEvent]) -> DiagnosticsPanel:
         if state is not None:
             current_state = str(state)
 
-        if event.event_type == "plan_updated":
+        if event.event_type == "test_session":
+            master_prompt = str(payload.get("master_prompt", ""))
+        elif event.event_type == "plan_updated":
             plan = str(payload.get("plan", ""))
         elif event.event_type == "reasoning_step":
             reasoning = str(payload.get("reasoning", ""))
@@ -66,6 +70,7 @@ def project_diagnostics(events: list[TraceEvent]) -> DiagnosticsPanel:
         reasoning=reasoning,
         action=action,
         reflection=reflection,
+        master_prompt=master_prompt,
         current_state=current_state,
         last_policy_decision=last_policy_decision,
         retry_count=retry_count,

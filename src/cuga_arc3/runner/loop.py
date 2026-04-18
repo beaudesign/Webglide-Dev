@@ -28,6 +28,7 @@ class RunnerLoop:
     force_retries: int = 0
     policy_profile: PolicyProfile | None = None
     seed: int = 0
+    master_prompt: str = ""
 
     def simulate(self, game_id: str) -> list[TraceEvent]:
         events: list[TraceEvent] = []
@@ -39,6 +40,19 @@ class RunnerLoop:
 
         while True:
             if context.state is RunState.PLAN:
+                if self.master_prompt.strip():
+                    events.append(
+                        TraceEvent(
+                            event_type="test_session",
+                            stage=context.stage,
+                            game_id=context.game_id,
+                            step_idx=context.step_idx,
+                            payload={
+                                "role": "system",
+                                "master_prompt": self.master_prompt,
+                            },
+                        )
+                    )
                 events.append(
                     TraceEvent(
                         event_type="plan_updated",
@@ -281,6 +295,19 @@ class RunnerLoop:
                     raise ValueError("reset_or_start response must include a non-empty guid")
                 guid = payload_guid
 
+                if self.master_prompt.strip():
+                    events.append(
+                        TraceEvent(
+                            event_type="test_session",
+                            stage=context.stage,
+                            game_id=context.game_id,
+                            step_idx=context.step_idx,
+                            payload={
+                                "role": "system",
+                                "master_prompt": self.master_prompt,
+                            },
+                        )
+                    )
                 events.append(
                     TraceEvent(
                         event_type="plan_updated",

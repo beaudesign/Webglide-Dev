@@ -41,6 +41,29 @@ def test_manifest_rejects_overlap_between_core_and_stress() -> None:
         )
 
 
+def test_manifest_accepts_optional_master_prompt() -> None:
+    manifest = BenchmarkManifest.from_dict(
+        {
+            "core": [f"core-{idx:02d}" for idx in range(1, 31)],
+            "stress": [f"stress-{idx:02d}" for idx in range(1, 21)],
+            "master_prompt": "You are taking ARC-3.\nBe concise.",
+        }
+    )
+
+    assert manifest.master_prompt == "You are taking ARC-3.\nBe concise."
+
+
+def test_manifest_rejects_non_string_master_prompt() -> None:
+    with pytest.raises(ValueError, match="master_prompt"):
+        BenchmarkManifest.from_dict(
+            {
+                "core": [f"core-{idx:02d}" for idx in range(1, 31)],
+                "stress": [f"stress-{idx:02d}" for idx in range(1, 21)],
+                "master_prompt": 42,
+            }
+        )
+
+
 def test_manifest_loads_from_yaml_path() -> None:
     manifest_path = (
         Path(__file__).resolve().parents[2]

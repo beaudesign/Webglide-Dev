@@ -11,6 +11,24 @@ from cuga_arc3.runner.events import (
 from cuga_arc3.ui.diagnostics import load_jsonl_traces, project_diagnostics
 
 
+def test_project_diagnostics_extracts_master_prompt() -> None:
+    events = [
+        TraceEvent(
+            "test_session",
+            "S0",
+            "g-1",
+            0,
+            {"role": "system", "master_prompt": "Do the benchmark carefully."},
+        ),
+        TraceEvent("plan_updated", "S0", "g-1", 0, {"plan": "x"}),
+        TraceEvent("episode_end", "S0", "g-1", 1, {PAYLOAD_KEY_STOP_REASON: "solved"}),
+    ]
+
+    panel = project_diagnostics(events)
+
+    assert panel.master_prompt == "Do the benchmark carefully."
+
+
 def test_project_diagnostics_extracts_stop_reason() -> None:
     events = [
         TraceEvent("plan_updated", "S1", "g-1", 0, {"plan": "scan anchors"}),
