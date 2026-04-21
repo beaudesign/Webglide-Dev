@@ -18,6 +18,7 @@ from cuga_arc3.prompts import resolve_master_prompt
 from cuga_arc3.reporting import stage_lift
 from cuga_arc3.runner.loop import RunnerLoop
 from cuga_arc3.runner.scaffolds import STAGE_PROFILES
+from cuga_arc3.watch_http import run_watch_server
 
 
 def _utc_timestamp() -> str:
@@ -315,6 +316,19 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="Path to a text/markdown file used as the test master prompt.",
     )
 
+    watch = subcommands.add_parser(
+        "watch-serve",
+        help="HTTP server for the browser side panel (Chrome extension) while ARC-3 runs.",
+    )
+    watch.add_argument(
+        "--artifact",
+        required=True,
+        type=Path,
+        help="Path to run artifact JSON (same file written by run-stage).",
+    )
+    watch.add_argument("--host", default="127.0.0.1", help="Bind address (default 127.0.0.1).")
+    watch.add_argument("--port", type=int, default=8765, help="Port (default 8765).")
+
     args = parser.parse_args(argv)
 
     if args.cmd == "run-ladder":
@@ -346,6 +360,9 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     if args.cmd == "run-stage":
         asyncio.run(_run_stage_command(args))
+
+    if args.cmd == "watch-serve":
+        run_watch_server(artifact_path=args.artifact, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

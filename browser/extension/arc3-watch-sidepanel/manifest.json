@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "ARC-3 Agent Watch",
+  "version": "1.0.0",
+  "description": "Chrome side panel wired to cuga-arc3 watch-serve (local). Open ARC-3 in a tab and keep this pinned while the agent runs.",
+  "minimum_chrome_version": "114",
+  "permissions": ["sidePanel", "storage"],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_title": "ARC-3 watch panel"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

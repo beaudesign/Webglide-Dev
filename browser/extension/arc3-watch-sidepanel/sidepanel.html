@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ARC-3 Watch</title>
+  <style>
+    html, body { margin: 0; height: 100%; width: 100%; overflow: hidden; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; }
+    .bar {
+      font: 12px/1.4 system-ui, sans-serif;
+      padding: 6px 8px;
+      background: #1a2332;
+      color: #8b9aaf;
+      border-bottom: 1px solid #2a3548;
+    }
+    .bar label { margin-right: 6px; }
+    .bar input { width: 200px; background: #0f1419; color: #e7ecf3; border: 1px solid #2a3548; padding: 4px 6px; border-radius: 4px; }
+    .bar button { margin-left: 8px; padding: 4px 10px; cursor: pointer; }
+    #frame-wrap { height: calc(100% - 36px); }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <label for="origin">Watch server</label>
+    <input id="origin" type="url" value="http://127.0.0.1:8765/" spellcheck="false" />
+    <button type="button" id="apply">Apply</button>
+  </div>
+  <div id="frame-wrap">
+    <iframe id="panel" title="ARC-3 watch" src="http://127.0.0.1:8765/"></iframe>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
