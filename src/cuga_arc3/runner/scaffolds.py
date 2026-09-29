@@ -19,14 +19,6 @@ class StageProfile:
     def reflection_enabled(self) -> bool:
         return self.scaffold.use_cognitive
 
-    @property
-    def tool_priors_enabled(self) -> bool:
-        return self.scaffold.use_tool_priors
-
-    @property
-    def multi_agent_enabled(self) -> bool:
-        return self.scaffold.use_multi_agent
-
 
 STAGE_PROFILES: dict[str, StageProfile] = {
     "S0": StageProfile(
